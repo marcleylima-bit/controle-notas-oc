@@ -1,4 +1,4 @@
-[17/10/2026 10:01] Marcley Lima: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -170,7 +170,7 @@ tr:last-child td { border-bottom:0; }
     <div id="msgForm" class="message"></div>
     <p class="note">Toda nota nova começa com o status Pendente.</p>
   </section>
-[17/10/2026 10:01] Marcley Lima: <section class="stats">
+<section class="stats">
     <div class="stat"><span>Total de notas</span><strong id="total">0</strong></div>
     <div class="stat"><span>Pendentes</span><strong id="pendentes">0</strong></div>
     <div class="stat"><span>Concluídas</span><strong id="concluidas">0</strong></div>
@@ -257,9 +257,9 @@ function inicializar() {
 
   if (
     SUPABASE_URL.startsWith("https://") &&
-    !SUPABASE_URL.includes("COLE_A_") &&
+    !SUPABASE_URL.includes("https://moxgiiwmvhaoaoplymai.supabase.co") &&
     SUPABASE_KEY &&
-    !SUPABASE_KEY.includes("COLE_A_") &&
+    !SUPABASE_KEY.includes("sb_publishable_p5msWrNrq4pLPGc2Xfs2QQ_i9MV_8-m") &&
     window.supabase
   ) {
     db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -308,7 +308,7 @@ function renderizar() {
       String(n.atendente).toLocaleLowerCase("pt-BR").includes(termo)
     )
   );
-[17/10/2026 10:01] Marcley Lima: if (!lista.length) {
+if (!lista.length) {
     $("linhas").innerHTML =
       '<tr><td colspan="5" class="empty">Nenhuma nota encontrada.</td></tr>';
     return;
