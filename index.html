@@ -480,7 +480,7 @@ $("formLogin").addEventListener("submit", async e => {
     const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
     if (error) throw error;
 
-    const user = data.user;
+    const user = data.user; 
     const isSupervisor = user.id === SUPERVISOR_UID;
 
     if (tipoEscolhido === "supervisora" && !isSupervisor) {
