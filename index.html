@@ -1,10 +1,11 @@
-[17/10/2026 10:01] Marcley Lima: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Controle de Notas OC</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 :root {
   color-scheme: dark;
@@ -18,18 +19,19 @@
 * { box-sizing:border-box; }
 body {
   margin:0;
-  background:var(--bg);
+  background:linear-gradient(145deg,#071426,#102743);
   color:var(--text);
   font-family:system-ui,Arial,sans-serif;
 }
 header {
   background:var(--panel);
   border-bottom:1px solid var(--border);
-  padding:24px;
+  padding:22px;
 }
 header,main { max-width:1250px; margin:auto; }
-h1 { margin:0; font-size:30px; }
-header p,.muted { color:var(--muted); }
+h1 { margin:0; font-size:28px; }
+h2 { margin-top:0; font-size:19px; }
+header p,.muted,.note { color:var(--muted); }
 main { padding:20px; }
 .panel {
   background:var(--panel);
@@ -38,7 +40,6 @@ main { padding:20px; }
   padding:20px;
   margin-bottom:18px;
 }
-h2 { margin-top:0; font-size:19px; }
 .form {
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -71,6 +72,7 @@ button {
 }
 button:disabled { opacity:.55; cursor:wait; }
 .secondary { background:#24405f; color:white; }
+.danger { background:#612c38; color:white; }
 .stats {
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
@@ -89,20 +91,17 @@ button:disabled { opacity:.55; cursor:wait; }
   display:flex;
   gap:10px;
   margin:14px 0;
+  flex-wrap:wrap;
 }
-.toolbar input { flex:1; min-width:100px; }
+.toolbar input { flex:1; min-width:150px; }
 .toolbar select { width:auto; min-width:150px; }
-.toolbar button { width:auto; white-space:nowrap; }
+.toolbar button { width:auto; }
 .table-wrap {
   overflow-x:auto;
   border:1px solid var(--border);
   border-radius:9px;
 }
-table {
-  border-collapse:collapse;
-  width:100%;
-  min-width:760px;
-}
+table { border-collapse:collapse; width:100%; min-width:650px; }
 th,td {
   text-align:left;
   padding:12px;
@@ -118,47 +117,114 @@ tr:last-child td { border-bottom:0; }
   padding:11px;
   border-radius:8px;
   overflow-wrap:anywhere;
+  white-space:pre-wrap;
 }
 .message.ok { display:block; background:#123b37; color:#a9ffe4; }
 .message.error { display:block; background:#49242c; color:#ffd4d9; }
 .empty { text-align:center; padding:25px; color:var(--muted); }
-.note { font-size:12px; color:var(--muted); }
+.note { font-size:12px; }
+.hidden { display:none !important; }
+.login-wrap { width:min(430px,100%); margin:35px auto; }
+.login-wrap .panel { padding:25px; }
+.field { margin-bottom:15px; }
+.brand { display:flex; align-items:center; gap:12px; }
+.logo {
+  width:45px; height:45px; border-radius:12px;
+  display:grid; place-items:center;
+  background:linear-gradient(135deg,#5ba7ff,#8266ff);
+  color:#071426; font-weight:900; font-size:20px;
+}
+.header-row {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap;
+}
+.header-row button { width:auto; }
+#userInfo { color:var(--muted); font-size:12px; margin-top:4px; }
 @media(max-width:800px) {
   .form { grid-template-columns:1fr; }
-  .toolbar { flex-wrap:wrap; }
-  .toolbar input,.toolbar select,.toolbar button { width:100%; }
   .stats { gap:7px; }
   .stat { padding:10px; }
   .stat strong { font-size:22px; }
   main { padding:12px; }
   .panel { padding:14px; }
-  header { padding:20px 14px; }
-  h1 { font-size:25px; }
+  header { padding:18px 14px; }
+  h1 { font-size:23px; }
+  .toolbar input,.toolbar select,.toolbar button { width:100%; }
 }
 </style>
 </head>
-<body>
 
+<body>
 <header>
-  <h1>Controle de Notas OC</h1>
-  <p>Cadastro e acompanhamento das notas da equipe.</p>
+  <div class="header-row">
+    <div class="brand">
+      <div class="logo">OC</div>
+      <div>
+        <h1>Controle de Notas OC</h1>
+        <p style="margin:5px 0 0">Cadastro e acompanhamento das notas da equipe.</p>
+      </div>
+    </div>
+    <button id="sair" class="secondary hidden" type="button">Sair da conta</button>
+  </div>
 </header>
 
-<main>
+<!-- LOGIN -->
+<main id="telaLogin">
+  <div class="login-wrap">
+    <section class="panel">
+      <h2>Acesso ao sistema</h2>
+      <p class="muted">Entre com as credenciais fornecidas para o seu tipo de acesso.</p>
+
+      <form id="formLogin">
+        <div class="field">
+          <label for="tipoLogin">Tipo de acesso</label>
+          <select id="tipoLogin" required>
+            <option value="equipe">Equipe de atendimento</option>
+            <option value="supervisora">Supervisora</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input id="email" type="email" autocomplete="username"
+                 placeholder="Seu e-mail" required>
+        </div>
+        <div class="field">
+          <label for="senha">Senha</label>
+          <input id="senha" type="password" autocomplete="current-password"
+                 placeholder="Sua senha" required>
+        </div>
+        <button id="entrar" type="submit">Entrar</button>
+      </form>
+      <div id="msgLogin" class="message"></div>
+    </section>
+  </div>
+</main>
+
+<!-- SISTEMA -->
+<main id="sistema" class="hidden">
+  <section class="panel">
+    <div class="header-row">
+      <div>
+        <h2 style="margin-bottom:5px">Área de trabalho</h2>
+        <div id="userInfo"></div>
+      </div>
+      <span class="note" id="avisoAcesso"></span>
+    </div>
+  </section>
+
   <section class="panel">
     <h2>Cadastrar nota OC</h2>
-    <form id="form" class="form">
+    <form id="formOC" class="form">
       <div>
         <label for="numero">Número da nota OC</label>
-        <input id="numero" maxlength="80"
-          placeholder="Ex.: OC-123456" required>
+        <input id="numero" maxlength="80" placeholder="Ex.: OC-123456" required>
       </div>
       <div>
         <label for="data">Data de criação</label>
         <input id="data" type="date" required>
       </div>
       <div>
-        <label for="atendente">Atendente</label>
+        <label for="atendente">Atendente responsável</label>
         <select id="atendente" required>
           <option value="">Selecione o atendente</option>
         </select>
@@ -170,38 +236,31 @@ tr:last-child td { border-bottom:0; }
     <div id="msgForm" class="message"></div>
     <p class="note">Toda nota nova começa com o status Pendente.</p>
   </section>
-[17/10/2026 10:01] Marcley Lima: <section class="stats">
+
+  <section class="stats">
     <div class="stat"><span>Total de notas</span><strong id="total">0</strong></div>
-    <div class="stat"><span>Pendentes</span><strong id="pendentes">0</strong></div>
-    <div class="stat"><span>Concluídas</span><strong id="concluidas">0</strong></div>
+    <div class="stat" id="cardPendentes"><span>Pendentes</span><strong id="pendentes">0</strong></div>
+    <div class="stat" id="cardConcluidas"><span>Concluídas</span><strong id="concluidas">0</strong></div>
   </section>
 
   <section class="panel">
     <h2>Acompanhamento</h2>
     <div class="toolbar">
       <input id="busca" placeholder="Buscar nota ou atendente...">
-      <select id="filtro">
+      <select id="filtroStatus">
         <option value="">Todos os status</option>
-        <option>Pendente</option>
-        <option>Em andamento</option>
-        <option>Concluída</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Em andamento">Em andamento</option>
+        <option value="Concluída">Concluída</option>
       </select>
       <button id="atualizar" class="secondary" type="button">Atualizar</button>
-      <button id="exportar" type="button">Gerar planilha</button>
+      <button id="exportar" type="button">Gerar planilha CSV</button>
     </div>
     <div class="table-wrap">
       <table>
-        <thead>
-          <tr>
-            <th>Número OC</th>
-            <th>Data de criação</th>
-            <th>Adicionado por</th>
-            <th>Cadastro</th>
-            <th>Status</th>
-          </tr>
-        </thead>
+        <thead id="cabecalhoTabela"></thead>
         <tbody id="linhas">
-          <tr><td colspan="5" class="empty">Carregando...</td></tr>
+          <tr><td class="empty">Entre no sistema para consultar as notas.</td></tr>
         </tbody>
       </table>
     </div>
@@ -210,8 +269,15 @@ tr:last-child td { border-bottom:0; }
 </main>
 
 <script>
-const SUPABASE_URL =https://moxgiiwmvhaoaoplymai.supabase.co";
-const SUPABASE_KEY = sb_publishable_p5msWrNrq4pLPGc2Xfs2QQ_i9MV_8-m;
+"use strict";
+/* ===== CONFIGURAÇÕES DO SUPABASE =====
+   Preencha os três valores abaixo.
+   Use somente a chave Publishable no site.
+   Nunca use sb_secret ou service_role aqui.
+*/
+const SUPABASE_URL = "https://moxgiiwmvhaoaoplymai.supabase.co";
+const SUPABASE_KEY = "COLE_AQUI_SUA_CHAVE_PUBLISHABLE";
+const SUPERVISOR_UID = "COLE_AQUI_O_UID_DA_SUPERVISORA";
 
 const NOMES = [
   "ANDRESSA DA SILVA PAIVA",
@@ -227,10 +293,17 @@ const NOMES = [
 ];
 
 const STATUS = ["Pendente", "Em andamento", "Concluída"];
+const $ = id => document.getElementById(id);
+
 let db = null;
+let usuario = null;
+let perfil = null;
 let notas = [];
 
-const $ = id => document.getElementById(id);
+function mostrar(id, texto, tipo = "") {
+  $(id).textContent = texto;
+  $(id).className = "message" + (tipo ? " " + tipo : "");
+}
 
 function escapar(valor) {
   return String(valor ?? "").replace(/[&<>"']/g, c => ({
@@ -239,53 +312,97 @@ function escapar(valor) {
   })[c]);
 }
 
-function mostrar(id, texto, tipo) {
-  $(id).textContent = texto;
-  $(id).className = "message " + tipo;
+function dataLocalISO() {
+  const d = new Date();
+  return ${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")};
 }
 
 function dataBR(valor) {
   if (!valor) return "—";
-  const p = valor.split("-");
-  return p.length === 3 ? ${p[2]}/${p[1]}/${p[0]} : valor;
+  const partes = String(valor).slice(0,10).split("-");
+  return partes.length === 3
+    ? ${partes[2]}/${partes[1]}/${partes[0]}
+    : String(valor);
 }
 
-function inicializar() {
+function dataHoraBR(valor) {
+  if (!valor) return "—";
+  const d = new Date(valor);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("pt-BR");
+}
+
+function preencherAtendentes() {
   $("atendente").innerHTML =
     '<option value="">Selecione o atendente</option>' +
     NOMES.map(n => <option value="${escapar(n)}">${escapar(n)}</option>).join("");
+}
 
-  if (
-    SUPABASE_URL.startsWith("https://") &&
-    !SUPABASE_URL.includes("COLE_A_") &&
-    SUPABASE_KEY &&
-    !SUPABASE_KEY.includes("COLE_A_") &&
-    window.supabase
-  ) {
-    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    carregar();
-  } else {
-    mostrar("msgLista",
-      "Configure SUPABASE_URL e SUPABASE_KEY no código antes de usar.",
-      "error");
-    $("linhas").innerHTML =
-      '<tr><td colspan="5" class="empty">Aguardando configuração.</td></tr>';
-  }
+function ehSupervisora() {
+  return perfil === "supervisora";
+}
+
+function prepararInterface() {
+  $("telaLogin").classList.add("hidden");
+  $("sistema").classList.remove("hidden");
+  $("sair").classList.remove("hidden");
+
+  $("userInfo").textContent =
+    ${usuario.email || "Usuário conectado"} — ${ehSupervisora() ? "Supervisora" : "Equipe de atendimento"};
+
+  $("avisoAcesso").textContent = ehSupervisora()
+    ? "Você pode alterar status e exportar."
+    : "Você pode cadastrar, consultar e excluir notas.";
+
+  $("exportar").classList.toggle("hidden", !ehSupervisora());
+  $("filtroStatus").classList.toggle("hidden", !ehSupervisora());
+  $("cardPendentes").classList.toggle("hidden", !ehSupervisora());
+  $("cardConcluidas").classList.toggle("hidden", !ehSupervisora());
+
+  desenharCabecalho();
+}
+
+function desenharCabecalho() {
+  $("cabecalhoTabela").innerHTML = 
+    <tr>
+      <th>Número OC</th>
+      <th>Data de criação</th>
+      <th>Atendente</th>
+      <th>Cadastro</th>
+      ${ehSupervisora() ? "<th>Status</th>" : ""}
+      <th>Ações</th>
+    </tr>;
 }
 
 async function carregar() {
   $("atualizar").disabled = true;
-  try {
-    const { data, error } = await db
-      .from("notas_oc")
-      .select("*")
-      .order("created_at", { ascending:false });
+  mostrar("msgLista", "Carregando notas...");
 
-    if (error) throw error;
-    notas = data || [];
+  try {
+    let resultado;
+
+    if (ehSupervisora()) {
+      resultado = await db
+        .from("notas_oc")
+        .select("id,numero,data_criacao,atendente,status,created_at")
+        .order("created_at", { ascending: false });
+    } else {
+      // A equipe só lê os campos liberados pela view.
+      resultado = await db
+        .from("notas_oc_publicas")
+        .select("id,numero,data_criacao,atendente,created_at")
+        .order("created_at", { ascending: false });
+    }
+
+    if (resultado.error) throw resultado.error;
+
+    notas = resultado.data || [];
     renderizar();
-  } catch (e) {
-    mostrar("msgLista", "Erro ao carregar: " + e.message, "error");
+    mostrar("msgLista", "");
+  } catch (erro) {
+    console.error(erro);
+    mostrar("msgLista",
+      "Erro ao carregar notas. Confira as permissões e a view notas_oc_publicas no Supabase.\n" +
+      (erro.message || ""), "error");
   } finally {
     $("atualizar").disabled = false;
   }
@@ -293,13 +410,13 @@ async function carregar() {
 
 function renderizar() {
   $("total").textContent = notas.length;
-  $("pendentes").textContent =
-    notas.filter(n => n.status === "Pendente").length;
-  $("concluidas").textContent =
-    notas.filter(n => n.status === "Concluída").length;
+if (ehSupervisora()) {
+    $("pendentes").textContent = notas.filter(n => n.status === "Pendente").length;
+    $("concluidas").textContent = notas.filter(n => n.status === "Concluída").length;
+  }
 
   const termo = $("busca").value.trim().toLocaleLowerCase("pt-BR");
-  const filtro = $("filtro").value;
+  const filtro = ehSupervisora() ? $("filtroStatus").value : "";
 
   const lista = notas.filter(n =>
     (!filtro || n.status === filtro) &&
@@ -308,129 +425,269 @@ function renderizar() {
       String(n.atendente).toLocaleLowerCase("pt-BR").includes(termo)
     )
   );
-[17/10/2026 10:01] Marcley Lima: if (!lista.length) {
+
+  if (!lista.length) {
     $("linhas").innerHTML =
-      '<tr><td colspan="5" class="empty">Nenhuma nota encontrada.</td></tr>';
+      <tr><td colspan="${ehSupervisora() ? 6 : 5}" class="empty">Nenhuma nota encontrada.</td></tr>;
     return;
   }
 
   $("linhas").innerHTML = lista.map(n => {
-    const cadastro = n.created_at
-      ? new Date(n.created_at).toLocaleString("pt-BR")
-      : "—";
+    const statusHTML = ehSupervisora() ? 
+      <td>
+        <select class="status" data-status-id="${escapar(n.id)}"
+          aria-label="Status da OC ${escapar(n.numero)}">
+          ${STATUS.map(s => 
+            <option value="${escapar(s)}" ${n.status === s ? "selected" : ""}>
+              ${escapar(s)}
+            </option>).join("")}
+        </select>
+      </td> : "";
 
     return 
       <tr>
         <td><strong>${escapar(n.numero)}</strong></td>
         <td>${escapar(dataBR(n.data_criacao))}</td>
         <td>${escapar(n.atendente)}</td>
-        <td>${escapar(cadastro)}</td>
+        <td>${escapar(dataHoraBR(n.created_at))}</td>
+        ${statusHTML}
         <td>
-          <select class="status" data-id="${escapar(n.id)}"
-            aria-label="Status da nota ${escapar(n.numero)}">
-            ${STATUS.map(s =>
-              <option value="${s}" ${n.status === s ? "selected" : ""}>${s}</option>
-            ).join("")}
-          </select>
+          <button class="danger" type="button"
+            data-excluir-id="${escapar(n.id)}"
+            data-excluir-numero="${escapar(n.numero)}">Excluir</button>
         </td>
       </tr>;
   }).join("");
 }
 
-$("form").addEventListener("submit", async e => {
+$("formLogin").addEventListener("submit", async e => {
   e.preventDefault();
-  if (!db) return;
 
-  const botao = $("salvar");
+  if (!db) {
+    mostrar("msgLogin", "A configuração do Supabase está incompleta. Confira URL, Publishable Key e UID da supervisora.", "error");
+    return;
+  }
+
+  const botao = $("entrar");
   botao.disabled = true;
-  botao.textContent = "Salvando...";
+  mostrar("msgLogin", "Verificando acesso...");
 
   try {
-    const payload = {
-      numero: $("numero").value.trim(),
-      data_criacao: $("data").value,
-      atendente: $("atendente").value,
-      status: "Pendente"
-    };
+    const email = $("email").value.trim();
+    const senha = $("senha").value;
+    const tipoEscolhido = $("tipoLogin").value;
 
-    if (!payload.numero  !payload.data_criacao  !payload.atendente) {
-      throw new Error("Preencha todos os campos.");
-    }
-
-    if (!NOMES.includes(payload.atendente)) {
-      throw new Error("Selecione um atendente válido.");
-    }
-
-    const { error } = await db.from("notas_oc").insert(payload);
+    const { data, error } = await db.auth.signInWithPassword({ email, password: senha });
     if (error) throw error;
 
-    $("form").reset();
-    mostrar("msgForm", "Nota OC cadastrada com sucesso!", "ok");
+    const user = data.user;
+    const isSupervisor = user.id === SUPERVISOR_UID;
+
+    if (tipoEscolhido === "supervisora" && !isSupervisor) {
+      await db.auth.signOut();
+      throw new Error("Esta conta não corresponde ao UID cadastrado para a supervisora.");
+    }
+
+    if (tipoEscolhido === "equipe" && isSupervisor) {
+      await db.auth.signOut();
+      throw new Error("Esta é a conta da supervisora. Selecione o tipo de acesso Supervisora.");
+    }
+
+    usuario = user;
+    perfil = isSupervisor ? "supervisora" : "equipe";
+
+    mostrar("msgLogin", "");
+    prepararInterface();
     await carregar();
-  } catch (e) {
-    mostrar("msgForm", "Não foi possível cadastrar: " + e.message, "error");
+
+  } catch (erro) {
+    console.error(erro);
+    mostrar("msgLogin", erro.message || "Não foi possível entrar. Confira o e-mail e a senha.", "error");
   } finally {
     botao.disabled = false;
-    botao.textContent = "Cadastrar nota";
+  }
+});
+
+$("formOC").addEventListener("submit", async e => {
+  e.preventDefault();
+
+  if (!usuario || !perfil) {
+    mostrar("msgForm", "Entre no sistema antes de cadastrar.", "error");
+    return;
+  }
+
+  const numero = $("numero").value.trim();
+  const data = $("data").value;
+  const atendente = $("atendente").value;
+
+  if (!numero  !data  !NOMES.includes(atendente)) {
+    mostrar("msgForm", "Preencha todos os campos e selecione um atendente válido.", "error");
+    return;
+  }
+
+  $("salvar").disabled = true;
+  mostrar("msgForm", "Salvando nota...");
+
+  try {
+    const { error } = await db.from("notas_oc").insert({
+      numero,
+      data_criacao: data,
+      atendente,
+      status: "Pendente"
+    });
+
+    if (error) throw error;
+
+    $("formOC").reset();
+$("data").value = dataLocalISO();
+    mostrar("msgForm", "Nota OC cadastrada com sucesso!", "ok");
+    await carregar();
+  } catch (erro) {
+    console.error(erro);
+    mostrar("msgForm", "Não foi possível cadastrar a nota.\n" + (erro.message || ""), "error");
+  } finally {
+    $("salvar").disabled = false;
   }
 });
 
 $("linhas").addEventListener("change", async e => {
-  const id = e.target.dataset.id;
-  if (!id || !db) return;
+  const id = e.target.dataset.statusId;
+  if (!id) return;
 
-  const status = e.target.value;
-  e.target.disabled = true;
+  if (!ehSupervisora()) {
+    mostrar("msgLista", "Somente a supervisora pode alterar status.", "error");
+    await carregar();
+    return;
+  }
+
+  const novoStatus = e.target.value;
+  if (!STATUS.includes(novoStatus)) return;
 
   try {
-    const { error } = await db.from("notas_oc")
-      .update({ status, updated_at:new Date().toISOString() })
+    const { error } = await db
+      .from("notas_oc")
+      .update({ status: novoStatus, updated_at: new Date().toISOString() })
       .eq("id", id);
 
     if (error) throw error;
-    mostrar("msgLista", "Status atualizado!", "ok");
+
+    mostrar("msgLista", "Status atualizado com sucesso.", "ok");
     await carregar();
-  } catch (e) {
-    mostrar("msgLista", "Não foi possível atualizar: " + e.message, "error");
+  } catch (erro) {
+    console.error(erro);
+    mostrar("msgLista", "Não foi possível atualizar o status.\n" + (erro.message || ""), "error");
     await carregar();
   }
 });
 
+$("linhas").addEventListener("click", async e => {
+  const botao = e.target.closest("[data-excluir-id]");
+  if (!botao) return;
+
+  const id = botao.dataset.excluirId;
+  const numero = botao.dataset.excluirNumero;
+
+  if (!confirm(Deseja realmente excluir a OC ${numero}? Essa ação não pode ser desfeita.)) return;
+
+  try {
+    const { error } = await db.from("notas_oc").delete().eq("id", id);
+    if (error) throw error;
+
+    mostrar("msgLista", OC ${numero} excluída., "ok");
+    await carregar();
+  } catch (erro) {
+    console.error(erro);
+    mostrar("msgLista", "Não foi possível excluir a nota.\n" + (erro.message || ""), "error");
+  }
+});
+
 $("busca").addEventListener("input", renderizar);
-$("filtro").addEventListener("change", renderizar);
+$("filtroStatus").addEventListener("change", renderizar);
 $("atualizar").addEventListener("click", carregar);
 
 $("exportar").addEventListener("click", () => {
+  if (!ehSupervisora()) {
+    mostrar("msgLista", "Somente a supervisora pode exportar.", "error");
+    return;
+  }
+
   const cabecalho = [
-    "Número OC", "Data de criação", "Atendente",
-    "Data do cadastro", "Status"
+    "Número OC", "Data de criação", "Atendente", "Data do cadastro", "Status"
   ];
 
   const linhasCSV = notas.map(n => [
     n.numero,
     dataBR(n.data_criacao),
     n.atendente,
-    n.created_at ? new Date(n.created_at).toLocaleString("pt-BR") : "",
+    dataHoraBR(n.created_at),
     n.status
   ]);
 
-  const csv = [cabecalho, ...linhasCSV].map(linha =>
-    linha.map(v => "${String(v ?? "").replace(/"/g,'""')}").join(";")
-  ).join("\r\n");
+  const protegerCSV = valor =>
+    '"' + String(valor ?? "").replace(/"/g, '""') + '"';
 
-  const blob = new Blob(["\uFEFF" + csv], {
-    type:"text/csv;charset=utf-8;"
-  });
+  const csv = "\uFEFF" + [cabecalho, ...linhasCSV]
+    .map(linha => linha.map(protegerCSV).join(";"))
+    .join("\r\n");
 
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "Controle_de_Notas_OC.csv";
+  link.download = Controle_de_Notas_OC_${dataLocalISO()}.csv;
+  document.body.appendChild(link);
   link.click();
+  link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
+$("sair").addEventListener("click", async () => {
+  try {
+    await db.auth.signOut();
+  } catch (erro) {
+    console.error(erro);
+  }
+
+  usuario = null;
+  perfil = null;
+  notas = [];
+
+  $("sistema").classList.add("hidden");
+  $("sair").classList.add("hidden");
+  $("telaLogin").classList.remove("hidden");
+  $("formLogin").reset();
+  $("formOC").reset();
+  $("data").value = dataLocalISO();
+  $("linhas").innerHTML = '<tr><td class="empty">Entre no sistema para consultar as notas.</td></tr>';
+  mostrar("msgLogin", "");
+  mostrar("msgForm", "");
+  mostrar("msgLista", "");
+});
+
+function inicializar() {
+  preencherAtendentes();
+  $("data").value = dataLocalISO();
+
+  const configuracaoOK =
+    SUPABASE_URL.startsWith("https://moxgiiwmvhaoaoplymai.supabase.co") &&
+    SUPABASE_KEY.startsWith("sb_publishable_p5msWrNrq4pLPGc2Xfs2QQ_i9MV_8-m") &&
+    SUPERVISOR_UID !== "63685c8a-b011-4950-a332-cb74de3a0796" &&
+    SUPERVISOR_UID.trim() !== "";
+
+  if (!window.supabase) {
+    mostrar("msgLogin", "Não foi possível carregar a biblioteca do Supabase. Atualize a página e tente novamente.", "error");
+    return;
+  }
+if (!configuracaoOK) {
+    mostrar("msgLogin", "Preencha a chave Publishable e o UID real da supervisora no início do código.", "error");
+    return;
+  }
+
+  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
 inicializar();
 </script>
+</main>
 </body>
 </html>
