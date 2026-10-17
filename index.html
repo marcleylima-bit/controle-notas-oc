@@ -325,28 +325,41 @@ function erroLegivel(erro) {
 
 function configurarSupabase() {
   if (!window.supabase || !window.supabase.createClient) {
-    mostrar("msgLogin", "A biblioteca do Supabase não carregou. Verifique a conexão e recarregue.", "error");
+    mostrar(
+      "msgLogin",
+      "A biblioteca do Supabase não carregou. Verifique a conexão e recarregue a página.",
+      "error"
+    );
     return;
   }
 
   if (
     !SUPABASE_URL.startsWith("https://") ||
-    SUPABASE_KEY === "sb_publishable_p5msWrNrq4pLPGc2Xfs2QQ_i9MV_8-m ||
-    !SUPABASE_KEY.startsWith("sb_publishable_p5msWrNrq4pLPGc2Xfs2QQ_i9MV_8-m") ||
+    !SUPABASE_KEY.startsWith("sb_publishable_") ||
     !SUPERVISOR_UID.trim()
   ) {
-    mostrar("msgLogin", "Configuração incompleta: confira a URL, a chave sb_publishable_ e o UID da supervisora no início do código.", "error");
+    mostrar(
+      "msgLogin",
+      "Configuração incompleta. Confira a URL, a chave Publishable e o UID da supervisora.",
+      "error"
+    );
     return;
   }
 
   try {
-    db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    db = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
   } catch (erro) {
-    console.error(erro);
-    mostrar("msgLogin", "Não foi possível iniciar a conexão com o Supabase.", "error");
+    console.error("Erro ao configurar Supabase:", erro);
+    mostrar(
+      "msgLogin",
+      "Não foi possível iniciar a conexão com o Supabase.",
+      "error"
+    );
   }
 }
-
 function prepararInterface() {
   $("telaLogin").classList.add("hidden");
   $("sistema").classList.remove("hidden");
