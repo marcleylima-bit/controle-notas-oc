@@ -134,7 +134,7 @@ button.small { padding: 8px 10px; font-size: 12px; }
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 720px;
+  min-width: 860px;
 }
 th, td {
   text-align: left;
@@ -230,6 +230,15 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
             <input id="numero" type="text" maxlength="100" required>
           </div>
           <div>
+            <label for="tipoServico">Tipo de serviço</label>
+            <select id="tipoServico" required>
+              <option value="">Selecione o serviço</option>
+              <option value="Ligação nova">Ligação nova</option>
+              <option value="Reativação">Reativação</option>
+              <option value="Religação">Religação</option>
+            </select>
+          </div>
+          <div>
             <label for="dataCriacao">Data de criação</label>
             <input id="dataCriacao" type="date" required>
           </div>
@@ -258,12 +267,12 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding: 20px
         <table>
           <thead>
             <tr>
-              <th>Número</th><th>Data</th><th>Atendente</th>
+              <th>Número</th><th>Tipo de serviço</th><th>Data</th><th>Atendente</th>
               <th>Cadastro</th><th>Status</th><th>Ação</th>
             </tr>
           </thead>
           <tbody id="corpoTabela">
-            <tr><td colspan="6" class="empty">Nenhuma nota carregada.</td></tr>
+            <tr><td colspan="7" class="empty">Nenhuma nota carregada.</td></tr>
           </tbody>
         </table>
       </div>
@@ -368,10 +377,10 @@ function prepararInterface() {
   const isSupervisor = perfil === "supervisora";
   $("tituloPainel").textContent = isSupervisor ? "Painel da supervisora" : "Painel da equipe";
   $("subtituloPainel").textContent = isSupervisor
-    ? "Consulte as notas, altere status e exporte os registros."
+    ? "Cadastre e consulte as notas, altere status e exporte os registros."
     : "Cadastre, consulte e exclua notas OC.";
 
-  $("painelCadastro").classList.toggle("hidden", isSupervisor);
+  $("painelCadastro").classList.remove("hidden");
   $("btnExportar").classList.toggle("hidden", !isSupervisor);
 }
 
@@ -417,17 +426,17 @@ function classeStatus(status) {
 async function carregar() {
   if (!db || !usuario || carregando) return;
   carregando = true;
-  $("corpoTabela").innerHTML = '<tr><td colspan="6" class="empty">Carregando notas...</td></tr>';
+  $("corpoTabela").innerHTML = '<tr><td colspan="7" class="empty">Carregando notas...</td></tr>';
 
   try {
     let resposta;
     if (perfil === "supervisora") {
       resposta = await db.from("notas_oc")
-        .select("id,numero,data_criacao,atendente,status,created_at")
+        .select("id,numero,tipo_servico,data_criacao,atendente,status,created_at")
         .order("created_at", { ascending: false });
     } else {
       resposta = await db.from("notas_oc_publicas")
-        .select("id,numero,data_criacao,atendente,created_at")
+        .select("id,numero,tipo_servico,data_criacao,atendente,created_at")
         .order("created_at", { ascending: false });
     }
 
@@ -454,6 +463,7 @@ function renderizar() {
   const busca = $("busca").value.trim().toLocaleLowerCase("pt-BR");
   const filtradas = notas.filter(n =>
     String(n.numero || "").toLocaleLowerCase("pt-BR").includes(busca) ||
+    String(n.tipo_servico || "").toLocaleLowerCase("pt-BR").includes(busca) ||
     String(n.atendente || "").toLocaleLowerCase("pt-BR").includes(busca)
   );
 
@@ -467,7 +477,7 @@ function renderizar() {
   if (!filtradas.length) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
-    td.colSpan = 6;
+    td.colSpan = 7;
     td.className = "empty";
     td.textContent = busca ? "Nenhuma nota corresponde à pesquisa." : "Ainda não há notas OC cadastradas.";
     tr.appendChild(td);
@@ -478,6 +488,7 @@ function renderizar() {
   filtradas.forEach(nota => {
     const tr = document.createElement("tr");
     tr.appendChild(criarCelula(nota.numero));
+    tr.appendChild(criarCelula(nota.tipo_servico || "—"));
     tr.appendChild(criarCelula(dataBR(nota.data_criacao)));
     tr.appendChild(criarCelula(nota.atendente));
     tr.appendChild(criarCelula(dataHoraBR(nota.created_at)));
@@ -526,17 +537,19 @@ async function cadastrarNota(evento) {
   try {
     const payload = {
       numero: $("numero").value.trim(),
+      tipo_servico: $("tipoServico").value,
       data_criacao: $("dataCriacao").value,
       atendente: $("atendente").value
     };
 
-    if (!payload.numero || !payload.data_criacao || !payload.atendente)
-      throw new Error("Preencha o número, a data e o atendente.");
+    if (!payload.numero || !payload.tipo_servico || !payload.data_criacao || !payload.atendente)
+      throw new Error("Preencha o número, o tipo de serviço, a data e o atendente.");
 
     const { error } = await db.from("notas_oc").insert(payload);
     if (error) throw error;
 
     $("numero").value = "";
+    $("tipoServico").value = "";
     $("dataCriacao").value = hojeLocal();
     $("atendente").value = "";
     mostrar("msgCadastro", "OC cadastrada com sucesso.", "success");
@@ -588,8 +601,8 @@ function exportarCSV() {
   if (perfil !== "supervisora") return;
   const escapar = valor => '"' + String(valor ?? "").replace(/"/g, '""') + '"';
   const linhas = [
-    ["Número", "Data de criação", "Atendente", "Status", "Data do cadastro"],
-    ...notas.map(n => [n.numero, dataBR(n.data_criacao), n.atendente, n.status, dataHoraBR(n.created_at)])
+    ["Número", "Tipo de serviço", "Data de criação", "Atendente", "Status", "Data do cadastro"],
+    ...notas.map(n => [n.numero, n.tipo_servico || "", dataBR(n.data_criacao), n.atendente, n.status, dataHoraBR(n.created_at)])
   ];
   const conteudo = "\uFEFF" + linhas.map(l => l.map(escapar).join(";")).join("\r\n");
   const arquivo = new Blob([conteudo], {type: "text/csv;charset=utf-8;"});
